@@ -1,9 +1,8 @@
-
-
 import os
 import requests
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Dispatcher, MessageHandler, filters
+from aiohttp import web
 
 BOT_TOKEN = os.getenv("8572236792:AAGiSeJwVdDc20pg7fK6J2PgtDvGh0QSXiA")
 if not BOT_TOKEN:
@@ -28,7 +27,7 @@ async def oyat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         uzb_text = requests.get(uzb_url).json()["text"]
 
         audio_id = f"{format_number(sura)}{format_number(oyat_raqam)}"
-        audio_url = f"https://cdn.islamic.network/quran/audio/128/{QORI}/{audio_id}.mp3"
+        audio_url = f"https://cdn.islamic.network/quran/audio/128/ar.alafasy/{audio_id}.mp3"
 
         msg = (
             f"📖 *Sura {sura}, Oyat {oyat_raqam}*\n\n"
@@ -43,8 +42,26 @@ async def oyat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("Xatolik:", e)
         await update.message.reply_text("❌ Format: /oyat 2 255")
 
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Railway URL sini environment variable sifatida qo‘yish kerak
+
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(CommandHandler("oyat", oyat))
+
+async def handle(request):
+    """Telegram webhook POST requestni qabul qiladi"""
+    data = await request.json()
+    update = Update.de_json(data, app.bot)
+    await app.update_queue.put(update)
+    return web.Response(text="ok")
+
+async def on_startup(app_web):
+    """Bot ishga tushganda webhookni o‘rnatish"""
+    await app.bot.set_webhook(WEBHOOK_URL)
+
+web_app = web.Application()
+web_app.router.add_post(f"/{BOT_TOKEN}", handle)
+web_app.on_startup.append(on_startup)
+
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("oyat", oyat))
-    print("Bot ishga tushdi...")
-    app.run_polling()
+    port = int(os.environ.get("PORT", 8000))
+    web.run_app(web_app, host="0.0.0.0", port=port)
