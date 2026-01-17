@@ -1,16 +1,20 @@
 import os
 import requests
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Dispatcher, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from aiohttp import web
+from telegram import InputFile
+import io
 
 BOT_TOKEN = os.getenv("8572236792:AAGiSeJwVdDc20pg7fK6J2PgtDvGh0QSXiA")
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN environment variable o‘rnatilmagan!")
+WEBHOOK_URL = os.getenv("https://cozy-manifestation.up.railway.app/8572236792:AAGiSeJwVdDc20pg7fK6J2PgtDvGh0QSXiA
+")
+
+if not BOT_TOKEN or not WEBHOOK_URL:
+    raise ValueError("BOT_TOKEN yoki WEBHOOK_URL o‘rnatilmagan!")
 
 ARAB = "ara-quranindopak"
 UZB = "uzb-muhammadsodik"
-QORI = "ar.alafasy"
 
 def format_number(n):
     return str(n).zfill(3)
@@ -28,6 +32,7 @@ async def oyat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         audio_id = f"{format_number(sura)}{format_number(oyat_raqam)}"
         audio_url = f"https://cdn.islamic.network/quran/audio/128/ar.alafasy/{audio_id}.mp3"
+        audio_content = requests.get(audio_url).content
 
         msg = (
             f"📖 *Sura {sura}, Oyat {oyat_raqam}*\n\n"
@@ -36,26 +41,24 @@ async def oyat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await update.message.reply_text(msg, parse_mode="Markdown")
-        await update.message.reply_audio(audio_url)
+        await update.message.reply_audio(audio=InputFile(io.BytesIO(audio_content), filename=f"{audio_id}.mp3"))
 
     except Exception as e:
         print("Xatolik:", e)
         await update.message.reply_text("❌ Format: /oyat 2 255")
 
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Railway URL sini environment variable sifatida qo‘yish kerak
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(CommandHandler("oyat", oyat))
 
 async def handle(request):
-    """Telegram webhook POST requestni qabul qiladi"""
     data = await request.json()
     update = Update.de_json(data, app.bot)
-    await app.update_queue.put(update)
+    await app.update_queue.put_nowait(update)
     return web.Response(text="ok")
 
 async def on_startup(app_web):
-    """Bot ishga tushganda webhookni o‘rnatish"""
+    print("Webhook sozlanmoqda...")
     await app.bot.set_webhook(WEBHOOK_URL)
 
 web_app = web.Application()
