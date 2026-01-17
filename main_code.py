@@ -6,7 +6,7 @@ import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("8572236792:AAGiSeJwVdDc20pg7fK6J2PgtDvGh0QSXiA")
 if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN environment variable o‘rnatilmagan!")
 ARAB = "ara-quranindopak"
@@ -53,3 +53,4 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("oyat", oyat))
     print("Bot ishga tushdi...")
     app.run_polling()
+
